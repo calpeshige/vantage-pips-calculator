@@ -87,9 +87,12 @@ const TradeRow = ({ trade, onUpdate, onDelete }) => {
 
       {/* 損益表示 */}
       <td className="text-right">
-        <span className={`font-semibold ${trade.profitUSD >= 0 ? 'text-green' : 'text-red'}`}>
-          {trade.profitUSD >= 0 ? '+' : ''}{formatCurrency(trade.profitUSD)}
-        </span>
+        <div className={`font-semibold ${trade.profitUSD >= 0 ? 'text-green' : 'text-red'}`}>
+          <div>{trade.profitUSD >= 0 ? '+' : ''}{formatCurrency(trade.profitUSD)}</div>
+          <div style={{fontSize: '0.875rem', marginTop: '1px'}}>
+            {trade.profitJPY >= 0 ? '+' : ''}¥{Math.round(trade.profitJPY || 0).toLocaleString()}
+          </div>
+        </div>
       </td>
 
       {/* 削除ボタン */}

@@ -5,11 +5,13 @@ import { calculateTradeResults } from './utils/calculations';
 function App() {
   const [trades, setTrades] = useState([]);
   const [nextId, setNextId] = useState(1);
+  const [usdJpyRate, setUsdJpyRate] = useState(150.00);
 
   // ローカルストレージからデータを読み込み
   useEffect(() => {
     const savedTrades = localStorage.getItem('vantage-trades');
     const savedNextId = localStorage.getItem('vantage-next-id');
+    const savedUsdJpyRate = localStorage.getItem('vantage-usdjpy-rate');
     
     if (savedTrades) {
       try {
@@ -23,13 +25,18 @@ function App() {
     if (savedNextId) {
       setNextId(parseInt(savedNextId, 10));
     }
+    
+    if (savedUsdJpyRate) {
+      setUsdJpyRate(parseFloat(savedUsdJpyRate));
+    }
   }, []);
 
   // ローカルストレージにデータを保存
   useEffect(() => {
     localStorage.setItem('vantage-trades', JSON.stringify(trades));
     localStorage.setItem('vantage-next-id', nextId.toString());
-  }, [trades, nextId]);
+    localStorage.setItem('vantage-usdjpy-rate', usdJpyRate.toString());
+  }, [trades, nextId, usdJpyRate]);
 
   const addTrade = useCallback(() => {
     setTrades(prev => {
@@ -57,12 +64,19 @@ function App() {
       prev.map(trade => {
         if (trade.id === id) {
           const updatedTrade = { ...trade, [field]: value };
-          return calculateTradeResults(updatedTrade);
+          return calculateTradeResults(updatedTrade, usdJpyRate);
         }
         return trade;
       })
     );
-  }, []);
+  }, [usdJpyRate]);
+
+  // USD/JPYレート変更時に全ての取引を再計算
+  useEffect(() => {
+    setTrades(prev => 
+      prev.map(trade => calculateTradeResults(trade, usdJpyRate))
+    );
+  }, [usdJpyRate]);
 
   const deleteTrade = useCallback((id) => {
     setTrades(prev => prev.filter(trade => trade.id !== id));
@@ -108,6 +122,8 @@ function App() {
         onUpdateTrade={updateTrade}
         onDeleteTrade={deleteTrade}
         onAddTrade={addTrade}
+        usdJpyRate={usdJpyRate}
+        onUsdJpyRateChange={setUsdJpyRate}
       />
 
       {/* フッター */}
@@ -116,7 +132,7 @@ function App() {
           ※ 本アプリはVantage Trading仕様に基づいて設計されています
         </p>
         <p>
-          ※ JPY換算レートは150.00で固定されています（実際の取引では最新レートをご確認ください）
+          ※ JPY換算は設定されたUSD/JPYレートを使用します（実際の取引では最新レートをご確認ください）
         </p>
       </div>
     </div>

@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import TradeRow from './TradeRow';
 import { formatCurrency } from '../utils/calculations';
 
-const TradeTable = ({ trades, onUpdateTrade, onDeleteTrade, onAddTrade }) => {
-  const [usdJpyRate, setUsdJpyRate] = useState(150.00);
+const TradeTable = ({ trades, onUpdateTrade, onDeleteTrade, onAddTrade, usdJpyRate, onUsdJpyRateChange }) => {
   const totalProfit = trades.reduce((sum, trade) => sum + (trade.profitUSD || 0), 0);
   const totalPips = trades.reduce((sum, trade) => sum + (trade.pips || 0), 0);
-  const totalProfitJPY = totalProfit * usdJpyRate;
+  const totalProfitJPY = trades.reduce((sum, trade) => sum + (trade.profitJPY || 0), 0);
 
   return (
     <div>
@@ -21,7 +20,7 @@ const TradeTable = ({ trades, onUpdateTrade, onDeleteTrade, onAddTrade }) => {
               <th>エグジット</th>
               <th>ロット</th>
               <th className="text-center">Pips</th>
-              <th className="text-right">損益 (USD)</th>
+              <th className="text-right">損益 (USD/JPY)</th>
               <th className="text-center">削除</th>
             </tr>
           </thead>
@@ -77,7 +76,7 @@ const TradeTable = ({ trades, onUpdateTrade, onDeleteTrade, onAddTrade }) => {
                     min="50"
                     max="200"
                     value={usdJpyRate}
-                    onChange={(e) => setUsdJpyRate(parseFloat(e.target.value) || 150)}
+                    onChange={(e) => onUsdJpyRateChange(parseFloat(e.target.value) || 150)}
                     className="input input-right"
                     style={{width: '80px', fontSize: '0.875rem'}}
                   />

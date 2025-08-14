@@ -248,7 +248,7 @@
                             <th>エグジット</th>
                             <th>ロット</th>
                             <th class="text-center">Pips</th>
-                            <th class="text-right">損益 (USD)</th>
+                            <th class="text-right">損益 (USD/JPY)</th>
                             <th class="text-center">削除</th>
                         </tr>
                     </thead>
@@ -297,7 +297,7 @@
             <!-- フッター -->
             <div class="footer">
                 <p>※ 本アプリはVantage Trading仕様に基づいて設計されています</p>
-                <p>※ JPY換算レートは150.00で固定されています（実際の取引では最新レートをご確認ください）</p>
+                <p>※ JPY換算は設定されたUSD/JPYレートを使用します（実際の取引では最新レートをご確認ください）</p>
             </div>
         </div>
     </div>
@@ -387,6 +387,7 @@
         // ローカルストレージのキー
         const TRADES_KEY = 'vantage-trades-standalone';
         const NEXT_ID_KEY = 'vantage-next-id-standalone';
+        const USD_JPY_RATE_KEY = 'vantage-usdjpy-rate-standalone';
 
         // ユーティリティ関数
         function getPairConfig(pairSymbol) {
@@ -417,20 +418,38 @@
             return Math.round(pips);
         }
 
-        function calculateProfit(pips, lotSize, currencyPair) {
+        function calculateProfit(pips, lotSize, currencyPair, currentUSDJPYRate) {
             if (!pips || !lotSize || lotSize <= 0) {
                 return 0;
             }
 
-            const pair = getPairConfig(currencyPair);
-            
-            // Special handling for GOLD - 1 lot = 100 ounces
-            if (currencyPair === "GOLD") {
-                let profitInUSD = pips * 0.10 * 100 * lotSize; // pips * $0.10 per pip * 100 ounces * lot size
-                return Math.round(profitInUSD * 100) / 100;
-            }
+            // USD/JPYレートが未定義の場合はデフォルト値を使用
+            const usdJpyRate = currentUSDJPYRate || 150.0;
 
-            let profitInUSD = pips * pair.pipValuePerLot * lotSize;
+            const pair = getPairConfig(currencyPair);
+            let profitInUSD;
+            
+            // JPY系通貨ペアの場合
+            if (pair.quoteCurrency === "JPY") {
+                // 1pipの価値（円）= pipSize × contractSize = 0.01 × 100,000 = 1,000円
+                const pipValueInJPY = pair.pipSize * pair.contractSize;
+                // USD換算 = 1,000円 ÷ 現在のUSD/JPYレート
+                const pipValueInUSD = pipValueInJPY / usdJpyRate;
+                profitInUSD = pips * pipValueInUSD * lotSize;
+            }
+            // USD系通貨ペアの場合
+            else if (pair.quoteCurrency === "USD") {
+                if (currencyPair === "GOLD") {
+                    // GOLD: 1 lot = 100 ounces, 1 pip = $0.10 movement
+                    profitInUSD = pips * 10 * lotSize; // $10 per pip per lot
+                } else if (currencyPair.includes("BTC") || currencyPair.includes("ETH")) {
+                    // 暗号通貨: 1 pip = $0.10
+                    profitInUSD = pips * pair.pipSize * lotSize;
+                } else {
+                    // EUR/USD等: 1 pip = $10 per lot
+                    profitInUSD = pips * 10 * lotSize;
+                }
+            }
             
             return Math.round(profitInUSD * 100) / 100;
         }
@@ -440,7 +459,8 @@
                 return {
                     ...trade,
                     pips: 0,
-                    profitUSD: 0
+                    profitUSD: 0,
+                    profitJPY: 0
                 };
             }
 
@@ -451,12 +471,14 @@
                 parseFloat(trade.exitPrice)
             );
 
-            const profitUSD = calculateProfit(pips, parseFloat(trade.lotSize), trade.currencyPair);
+            const profitUSD = calculateProfit(pips, parseFloat(trade.lotSize), trade.currencyPair, usdJpyRate);
+            const profitJPY = profitUSD * usdJpyRate;
 
             return {
                 ...trade,
                 pips,
-                profitUSD
+                profitUSD,
+                profitJPY
             };
         }
 
@@ -472,11 +494,13 @@
         function saveTrades() {
             localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
             localStorage.setItem(NEXT_ID_KEY, nextId.toString());
+            localStorage.setItem(USD_JPY_RATE_KEY, usdJpyRate.toString());
         }
 
         function loadTrades() {
             const savedTrades = localStorage.getItem(TRADES_KEY);
             const savedNextId = localStorage.getItem(NEXT_ID_KEY);
+            const savedUsdJpyRate = localStorage.getItem(USD_JPY_RATE_KEY);
             
             if (savedTrades) {
                 try {
@@ -489,6 +513,11 @@
             
             if (savedNextId) {
                 nextId = parseInt(savedNextId, 10);
+            }
+            
+            if (savedUsdJpyRate) {
+                usdJpyRate = parseFloat(savedUsdJpyRate);
+                document.getElementById('usd-jpy-rate').value = usdJpyRate;
             }
         }
 
@@ -541,9 +570,12 @@
                         </span>
                     </td>
                     <td class="text-right">
-                        <span class="font-semibold ${profitClass}">
-                            ${trade.profitUSD >= 0 ? '+' : ''}${formatCurrency(trade.profitUSD)}
-                        </span>
+                        <div class="font-semibold ${profitClass}">
+                            <div>${trade.profitUSD >= 0 ? '+' : ''}${formatCurrency(trade.profitUSD)}</div>
+                            <div style="font-size: 0.875rem; margin-top: 1px;">
+                                ${(trade.profitJPY || 0) >= 0 ? '+' : ''}¥${Math.round(trade.profitJPY || 0).toLocaleString()}
+                            </div>
+                        </div>
                     </td>
                     <td class="text-center">
                         <button class="btn-delete" onclick="deleteTrade(${trade.id})" title="削除">✕</button>
@@ -578,7 +610,7 @@
                 
                 const totalProfit = trades.reduce((sum, trade) => sum + (trade.profitUSD || 0), 0);
                 const totalPips = trades.reduce((sum, trade) => sum + (trade.pips || 0), 0);
-                const totalProfitJPY = totalProfit * usdJpyRate;
+                const totalProfitJPY = trades.reduce((sum, trade) => sum + (trade.profitJPY || 0), 0);
                 
                 const profitClass = totalProfit >= 0 ? 'text-green' : 'text-red';
                 const pipsClass = totalPips >= 0 ? 'text-green' : 'text-red';
@@ -594,6 +626,9 @@
 
         function updateUsdJpyRate(value) {
             usdJpyRate = parseFloat(value) || 150.00;
+            // 全ての取引を再計算
+            trades = trades.map(trade => calculateTradeResults(trade));
+            saveTrades();
             renderTrades();
         }
 
