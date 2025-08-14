@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vantage FX Pips計算機 - スタンドアロン版</title>
+    <style>
+        /* Custom CSS - スタンドアロン版用に統合 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            background-color: #f9fafb;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #111827;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.125rem;
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+
+        .currency-info {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table thead {
+            background-color: #f3f4f6;
+        }
+
+        .table th {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #4b5563;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .table td {
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .table tbody tr:hover {
+            background-color: #f9fafb;
+        }
+
+        .input, .select {
+            width: 100%;
+            padding: 0.25rem 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .input:focus, .select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .input-right {
+            text-align: right;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2563eb;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+        }
+
+        .btn-delete:hover {
+            background-color: #fef2f2;
+            color: #dc2626;
+        }
+
+        .text-green {
+            color: #059669;
+        }
+
+        .text-red {
+            color: #dc2626;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .font-semibold {
+            font-weight: 600;
+        }
+
+        .font-bold {
+            font-weight: 700;
+        }
+
+        .empty-state {
+            padding: 2rem 1rem;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .total-row {
+            background-color: #f9fafb;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        .total-amount {
+            font-size: 1.125rem;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 3rem;
+            text-align: center;
+            font-size: 0.875rem;
+            color: #6b7280;
+        }
+
+        .footer p {
+            margin-bottom: 0.25rem;
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem 0.5rem;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .table-container {
+                overflow-x: auto;
+            }
+            
+            .table {
+                min-width: 800px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="container">
+            <!-- ヘッダー -->
+            <div class="header">
+                <h1 class="title">Vantage FX Pips計算機</h1>
+                <p class="subtitle">複数取引のPips・損益を同時に計算・管理</p>
+                <div class="currency-info">対応通貨ペア: USD/JPY, EUR/JPY, EUR/USD, GBP/JPY, GOLD, BTCUSD, BTCJPY, ETHUSD, ETHJPY</div>
+            </div>
+
+            <!-- コントロールボタン -->
+            <div id="controls" class="controls" style="display: none;">
+                <button onclick="clearAllTrades()" class="btn btn-danger">全データをクリア</button>
+            </div>
+
+            <!-- メインテーブル -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>通貨ペア</th>
+                            <th>Buy/Sell</th>
+                            <th>エントリー</th>
+                            <th>エグジット</th>
+                            <th>ロット</th>
+                            <th class="text-center">Pips</th>
+                            <th class="text-right">損益 (USD)</th>
+                            <th class="text-center">削除</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trades-table">
+                        <tr>
+                            <td colspan="9" class="empty-state">
+                                取引がありません。下のボタンから新規取引を追加してください。
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tfoot id="total-footer" style="display: none;">
+                        <tr class="total-row">
+                            <td colspan="6" class="text-right font-semibold">合計Pips / 合計損益:</td>
+                            <td class="text-center">
+                                <span id="total-pips" class="font-semibold">+0 pips</span>
+                            </td>
+                            <td class="text-right">
+                                <div id="total-profit-container" class="total-amount">
+                                    <div id="total-profit">$0.00</div>
+                                    <div id="total-profit-jpy" style="font-size: 0.875rem; margin-top: 2px;">+¥0</div>
+                                </div>
+                            </td>
+                            <td></td>
+                        </tr>
+                        <tr class="total-row" style="border-top: 1px solid #e5e7eb;">
+                            <td colspan="7" class="text-right font-semibold" style="font-size: 0.875rem; padding: 0.5rem 1rem;">
+                                USD/JPY レート:
+                            </td>
+                            <td class="text-right" style="padding: 0.5rem 1rem;">
+                                <input type="number" id="usd-jpy-rate" step="0.01" min="50" max="200" 
+                                       value="150.00" class="input input-right" 
+                                       style="width: 80px; font-size: 0.875rem;" 
+                                       onchange="updateUsdJpyRate(this.value)">
+                            </td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- 新規取引追加ボタン -->
+            <div class="text-center">
+                <button onclick="addTrade()" class="btn btn-primary">+ 新規取引を追加</button>
+            </div>
+
+            <!-- フッター -->
+            <div class="footer">
+                <p>※ 本アプリはVantage Trading仕様に基づいて設計されています</p>
+                <p>※ JPY換算レートは150.00で固定されています（実際の取引では最新レートをご確認ください）</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 通貨ペア設定
+        const currencyPairs = {
+            "USD/JPY": {
+                symbol: "USD/JPY",
+                pipSize: 0.01,
+                decimals: 3,
+                contractSize: 100000,
+                pipValuePerLot: 6.76,
+                quoteCurrency: "JPY"
+            },
+            "EUR/JPY": {
+                symbol: "EUR/JPY",
+                pipSize: 0.01,
+                decimals: 3,
+                contractSize: 100000,
+                pipValuePerLot: 6.76,
+                quoteCurrency: "JPY"
+            },
+            "EUR/USD": {
+                symbol: "EUR/USD",
+                pipSize: 0.0001,
+                decimals: 5,
+                contractSize: 100000,
+                pipValuePerLot: 10.00,
+                quoteCurrency: "USD"
+            },
+            "GBP/JPY": {
+                symbol: "GBP/JPY",
+                pipSize: 0.01,
+                decimals: 3,
+                contractSize: 100000,
+                pipValuePerLot: 6.76,
+                quoteCurrency: "JPY"
+            },
+            "GOLD": {
+                symbol: "GOLD",
+                pipSize: 0.10,
+                decimals: 1,
+                contractSize: 100,
+                pipValuePerLot: 0.10,
+                quoteCurrency: "USD"
+            },
+            "BTCUSD": {
+                symbol: "BTCUSD",
+                pipSize: 0.01,
+                decimals: 2,
+                contractSize: 1,
+                pipValuePerLot: 0.01,
+                quoteCurrency: "USD"
+            },
+            "BTCJPY": {
+                symbol: "BTCJPY",
+                pipSize: 0.01,
+                decimals: 2,
+                contractSize: 1,
+                pipValuePerLot: 0.0000676,
+                quoteCurrency: "JPY"
+            },
+            "ETHUSD": {
+                symbol: "ETHUSD",
+                pipSize: 0.01,
+                decimals: 2,
+                contractSize: 1,
+                pipValuePerLot: 0.01,
+                quoteCurrency: "USD"
+            },
+            "ETHJPY": {
+                symbol: "ETHJPY",
+                pipSize: 0.01,
+                decimals: 2,
+                contractSize: 1,
+                pipValuePerLot: 0.0000676,
+                quoteCurrency: "JPY"
+            }
+        };
+
+        // アプリケーション状態
+        let trades = [];
+        let nextId = 1;
+        let usdJpyRate = 150.00;
+
+        // ローカルストレージのキー
+        const TRADES_KEY = 'vantage-trades-standalone';
+        const NEXT_ID_KEY = 'vantage-next-id-standalone';
+
+        // ユーティリティ関数
+        function getPairConfig(pairSymbol) {
+            return currencyPairs[pairSymbol] || currencyPairs["EUR/USD"];
+        }
+
+        function getCurrencyPairsList() {
+            return Object.keys(currencyPairs);
+        }
+
+        function calculatePips(currencyPair, tradeType, entryPrice, exitPrice) {
+            if (!entryPrice || !exitPrice || entryPrice <= 0 || exitPrice <= 0) {
+                return 0;
+            }
+
+            const pair = getPairConfig(currencyPair);
+            let priceDiff = tradeType === "BUY" 
+                ? exitPrice - entryPrice 
+                : entryPrice - exitPrice;
+            
+            const pips = priceDiff / pair.pipSize;
+            
+            // For GOLD, allow decimal pips (0.1 pip precision)
+            if (currencyPair === "GOLD") {
+                return Math.round(pips * 10) / 10;
+            }
+            
+            return Math.round(pips);
+        }
+
+        function calculateProfit(pips, lotSize, currencyPair) {
+            if (!pips || !lotSize || lotSize <= 0) {
+                return 0;
+            }
+
+            const pair = getPairConfig(currencyPair);
+            
+            // Special handling for GOLD - 1 lot = 100 ounces
+            if (currencyPair === "GOLD") {
+                let profitInUSD = pips * 0.10 * 100 * lotSize; // pips * $0.10 per pip * 100 ounces * lot size
+                return Math.round(profitInUSD * 100) / 100;
+            }
+
+            let profitInUSD = pips * pair.pipValuePerLot * lotSize;
+            
+            return Math.round(profitInUSD * 100) / 100;
+        }
+
+        function calculateTradeResults(trade) {
+            if (!trade.currencyPair || !trade.entryPrice || !trade.exitPrice || !trade.lotSize) {
+                return {
+                    ...trade,
+                    pips: 0,
+                    profitUSD: 0
+                };
+            }
+
+            const pips = calculatePips(
+                trade.currencyPair,
+                trade.tradeType,
+                parseFloat(trade.entryPrice),
+                parseFloat(trade.exitPrice)
+            );
+
+            const profitUSD = calculateProfit(pips, parseFloat(trade.lotSize), trade.currencyPair);
+
+            return {
+                ...trade,
+                pips,
+                profitUSD
+            };
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 2
+            }).format(amount);
+        }
+
+        // データ永続化
+        function saveTrades() {
+            localStorage.setItem(TRADES_KEY, JSON.stringify(trades));
+            localStorage.setItem(NEXT_ID_KEY, nextId.toString());
+        }
+
+        function loadTrades() {
+            const savedTrades = localStorage.getItem(TRADES_KEY);
+            const savedNextId = localStorage.getItem(NEXT_ID_KEY);
+            
+            if (savedTrades) {
+                try {
+                    trades = JSON.parse(savedTrades);
+                } catch (error) {
+                    console.error('Failed to load trades from localStorage:', error);
+                    trades = [];
+                }
+            }
+            
+            if (savedNextId) {
+                nextId = parseInt(savedNextId, 10);
+            }
+        }
+
+        // DOM操作
+        function createCurrencyOptions() {
+            return getCurrencyPairsList().map(pair => 
+                `<option value="${pair}">${pair}</option>`
+            ).join('');
+        }
+
+        function createTradeRow(trade) {
+            const pairConfig = getPairConfig(trade.currencyPair);
+            const pipsClass = trade.pips >= 0 ? 'text-green' : 'text-red';
+            const profitClass = trade.profitUSD >= 0 ? 'text-green' : 'text-red';
+            
+            return `
+                <tr>
+                    <td>${trade.id}</td>
+                    <td>
+                        <select class="select" onchange="updateTrade(${trade.id}, 'currencyPair', this.value)">
+                            ${getCurrencyPairsList().map(pair => 
+                                `<option value="${pair}" ${pair === trade.currencyPair ? 'selected' : ''}>${pair}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="select" onchange="updateTrade(${trade.id}, 'tradeType', this.value)">
+                            <option value="BUY" ${trade.tradeType === 'BUY' ? 'selected' : ''}>Buy</option>
+                            <option value="SELL" ${trade.tradeType === 'SELL' ? 'selected' : ''}>Sell</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="number" step="${pairConfig.pipSize}" value="${trade.entryPrice}" 
+                               placeholder="0.00000" class="input input-right"
+                               onchange="updateTrade(${trade.id}, 'entryPrice', this.value)">
+                    </td>
+                    <td>
+                        <input type="number" step="${pairConfig.pipSize}" value="${trade.exitPrice}" 
+                               placeholder="0.00000" class="input input-right"
+                               onchange="updateTrade(${trade.id}, 'exitPrice', this.value)">
+                    </td>
+                    <td>
+                        <input type="number" step="0.01" min="0.01" max="100" value="${trade.lotSize}" 
+                               class="input input-right"
+                               onchange="updateTrade(${trade.id}, 'lotSize', this.value)">
+                    </td>
+                    <td class="text-center">
+                        <span class="font-semibold ${pipsClass}">
+                            ${trade.pips >= 0 ? '+' : ''}${trade.currencyPair === 'GOLD' ? trade.pips.toFixed(1) : trade.pips}
+                        </span>
+                    </td>
+                    <td class="text-right">
+                        <span class="font-semibold ${profitClass}">
+                            ${trade.profitUSD >= 0 ? '+' : ''}${formatCurrency(trade.profitUSD)}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <button class="btn-delete" onclick="deleteTrade(${trade.id})" title="削除">✕</button>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function renderTrades() {
+            const tbody = document.getElementById('trades-table');
+            const controls = document.getElementById('controls');
+            const totalFooter = document.getElementById('total-footer');
+            const totalProfitSpan = document.getElementById('total-profit');
+            const totalProfitJpySpan = document.getElementById('total-profit-jpy');
+            const totalProfitContainer = document.getElementById('total-profit-container');
+            const totalPipsSpan = document.getElementById('total-pips');
+
+            if (trades.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="empty-state">
+                            取引がありません。下のボタンから新規取引を追加してください。
+                        </td>
+                    </tr>
+                `;
+                controls.style.display = 'none';
+                totalFooter.style.display = 'none';
+            } else {
+                tbody.innerHTML = trades.map(createTradeRow).join('');
+                controls.style.display = 'block';
+                totalFooter.style.display = 'table-footer-group';
+                
+                const totalProfit = trades.reduce((sum, trade) => sum + (trade.profitUSD || 0), 0);
+                const totalPips = trades.reduce((sum, trade) => sum + (trade.pips || 0), 0);
+                const totalProfitJPY = totalProfit * usdJpyRate;
+                
+                const profitClass = totalProfit >= 0 ? 'text-green' : 'text-red';
+                const pipsClass = totalPips >= 0 ? 'text-green' : 'text-red';
+                
+                totalProfitContainer.className = `total-amount ${profitClass}`;
+                totalProfitSpan.textContent = `${totalProfit >= 0 ? '+' : ''}${formatCurrency(totalProfit)}`;
+                totalProfitJpySpan.textContent = `${totalProfitJPY >= 0 ? '+' : ''}¥${Math.round(totalProfitJPY).toLocaleString()}`;
+                
+                totalPipsSpan.className = `font-semibold ${pipsClass}`;
+                totalPipsSpan.textContent = `${totalPips >= 0 ? '+' : ''}${totalPips.toFixed(1)} pips`;
+            }
+        }
+
+        function updateUsdJpyRate(value) {
+            usdJpyRate = parseFloat(value) || 150.00;
+            renderTrades();
+        }
+
+        // 取引管理
+        function addTrade() {
+            // 前の取引の情報を取得
+            const lastTrade = trades.length > 0 ? trades[trades.length - 1] : null;
+            
+            const newTrade = {
+                id: nextId++,
+                currencyPair: lastTrade ? lastTrade.currencyPair : "EUR/USD",
+                tradeType: lastTrade ? (lastTrade.tradeType === "BUY" ? "SELL" : "BUY") : "BUY",
+                entryPrice: lastTrade && lastTrade.exitPrice ? lastTrade.exitPrice : "",
+                exitPrice: "",
+                lotSize: "1.0",
+                pips: 0,
+                profitUSD: 0
+            };
+            
+            trades.push(newTrade);
+            saveTrades();
+            renderTrades();
+        }
+
+        function updateTrade(id, field, value) {
+            const tradeIndex = trades.findIndex(trade => trade.id === id);
+            if (tradeIndex !== -1) {
+                trades[tradeIndex][field] = value;
+                trades[tradeIndex] = calculateTradeResults(trades[tradeIndex]);
+                saveTrades();
+                renderTrades();
+            }
+        }
+
+        function deleteTrade(id) {
+            trades = trades.filter(trade => trade.id !== id);
+            saveTrades();
+            renderTrades();
+        }
+
+        function clearAllTrades() {
+            if (confirm('全ての取引データを削除しますか？この操作は元に戻せません。')) {
+                trades = [];
+                nextId = 1;
+                saveTrades();
+                renderTrades();
+            }
+        }
+
+        // 初期化
+        function init() {
+            loadTrades();
+            renderTrades();
+        }
+
+        // ページロード時に初期化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
